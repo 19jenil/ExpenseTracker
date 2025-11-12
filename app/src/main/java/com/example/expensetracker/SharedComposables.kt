@@ -226,7 +226,7 @@ fun ExpenseSheetCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Income: $${String.format("%.2f", sheet.income)}",
+                    text = "Income: €${String.format("%.2f", sheet.income)}",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -243,7 +243,7 @@ fun ExpenseSheetCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "$${String.format("%.2f", sheet.calculateBalance())}",
+                    text = "€${String.format("%.2f", sheet.calculateBalance())}",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (sheet.calculateBalance() >= 0)
@@ -292,7 +292,7 @@ fun ExpenseSheetDetailView(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "$${String.format("%.2f", sheet.income)}",
+                        text = "€${String.format("%.2f", sheet.income)}",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -325,7 +325,7 @@ fun ExpenseSheetDetailView(
                 )
                 if (sheet.expenses.isNotEmpty()) {
                     Text(
-                        text = "Total: $${String.format("%.2f", sheet.expenses.sumOf { it.amount })}",
+                        text = "Total: €${String.format("%.2f", sheet.expenses.sumOf { it.amount })}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFF44336)
@@ -437,7 +437,7 @@ fun ExpenseSheetDetailView(
                 }
 
                 Text(
-                    text = "$${String.format("%.2f", Math.abs(sheet.calculateBalance()))}",
+                    text = "€${String.format("%.2f", Math.abs(sheet.calculateBalance()))}",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (sheet.calculateBalance() >= 0)
@@ -493,7 +493,7 @@ fun ExpenseItemCard(expense: Expense) {
             }
 
             Text(
-                text = "-$${String.format("%.2f", expense.amount)}",
+                text = "-€${String.format("%.2f", expense.amount)}",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFFF44336)
@@ -541,7 +541,7 @@ fun EditIncomeDialog(
                     },
                     label = { Text("Income Amount") },
                     placeholder = { Text("Enter monthly income") },
-                    leadingIcon = { Text("$", fontSize = 18.sp) },
+                    leadingIcon = { Text("€", fontSize = 18.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -658,7 +658,7 @@ fun AddExpenseDialog(
                     },
                     label = { Text("Amount") },
                     placeholder = { Text("0.00") },
-                    leadingIcon = { Text("$", fontSize = 18.sp) },
+                    leadingIcon = { Text("€", fontSize = 18.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

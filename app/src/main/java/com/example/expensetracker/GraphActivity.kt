@@ -161,10 +161,27 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                     strokeWidth = 1f
                 )
 
-                // Y-axis label
+                // Y-axis label with proper formatting
                 drawContext.canvas.nativeCanvas.apply {
+                    val labelText = when {
+                        yValue >= 1000 -> {
+                            val thousands = yValue / 1000
+                            if (thousands % 1 == 0.0) {
+                                "€${thousands.toInt()}k"
+                            } else {
+                                "€${String.format("%.1f", thousands)}k"
+                            }
+                        }
+                        yValue > 0 -> {
+                            "€${yValue.toInt()}"
+                        }
+                        else -> {
+                            "€0"
+                        }
+                    }
+
                     drawText(
-                        "$${(yValue / 1000).toInt()}k",
+                        labelText,
                         leftMargin - 60f,
                         yPos + 10f,
                         android.graphics.Paint().apply {
