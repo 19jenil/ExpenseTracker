@@ -1,47 +1,159 @@
 package com.example.expensetracker
 
+import AddExpenseDialog
+import CreateSheetDialog
+import EditIncomeDialog
+import ExpenseSheetDetailView
+import ExpenseSheetList
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.expensetracker.ui.theme.ExpenseTrackerTheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.compose.ui.text.font.FontWeight
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
-            ExpenseTrackerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ExpenseTrackerApp()
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun ExpenseTrackerApp() {
+    val context = LocalContext.current
+    val viewModel = remember {
+        ViewModelProvider(context as ViewModelStoreOwner)[ExpenseViewModel::class.java]
+    }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ExpenseTrackerTheme {
-        Greeting("Android")
+    // Store only the sheet ID instead of the whole object
+    var selectedSheetId by remember { mutableStateOf<String?>(null) }
+    var showAddExpenseDialog by remember { mutableStateOf(false) }
+
+    // Get the current sheet by ID every time we recompose
+    val selectedSheet = selectedSheetId?.let { viewModel.getSheetById(it) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Expense Tracker") },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(context, GraphActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                    ) {
+                        Text(
+                            text = "Graph",
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.openCreateSheetDialog() }
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Create New Sheet")
+            }
+        }
+    )  { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when {
+                selectedSheet != null -> {
+                    ExpenseSheetDetailView(
+                        sheet = selectedSheet,
+                        onEditIncome = { viewModel.openEditIncomeDialog() },
+                        onAddExpense = { showAddExpenseDialog = true }
+                    )
+                }
+                viewModel.expenseSheets.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No expense sheets created.\nClick + to create one!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                else -> {
+                    ExpenseSheetList(
+                        sheets = viewModel.expenseSheets,
+                        onSheetClick = { sheet -> selectedSheetId = sheet.sheetId }
+                    )
+                }
+            }
+        }
+
+        // Create Sheet Dialog
+        if (viewModel.showCreateSheetDialog.value) {
+            CreateSheetDialog(
+                onDismiss = { viewModel.closeCreateSheetDialog() },
+                onConfirm = { month, year ->
+                    viewModel.createNewSheet(month, year)
+                },
+                existingSheetChecker = { month, year ->
+                    viewModel.checkIfSheetExists(month, year)
+                }
+            )
+        }
+
+        // Edit Income Dialog
+        if (viewModel.showEditIncomeDialog.value && selectedSheet != null) {
+            EditIncomeDialog(
+                currentIncome = selectedSheet.income,
+                onDismiss = { viewModel.closeEditIncomeDialog() },
+                onConfirm = { newIncome ->
+                    viewModel.updateIncome(selectedSheet.sheetId, newIncome)
+                }
+            )
+        }
+
+        // Add Expense Dialog
+        if (showAddExpenseDialog && selectedSheet != null) {
+            AddExpenseDialog(
+                onDismiss = { showAddExpenseDialog = false },
+                onConfirm = { expense ->
+                    viewModel.addExpense(selectedSheet.sheetId, expense)
+                    showAddExpenseDialog = false
+                }
+            )
+        }
     }
 }

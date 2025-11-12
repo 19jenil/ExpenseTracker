@@ -22,6 +22,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- NEW: Graph Activity -->
+        <activity
+            android:name=".GraphActivity"
+            android:exported="false"
+            android:label="Income/Expenses Graph"
+            android:theme="@style/Theme.ExpenseTracker"
+            android:parentActivityName=".MainActivity">
+        </activity>
+
     </application>
 
 </manifest>
