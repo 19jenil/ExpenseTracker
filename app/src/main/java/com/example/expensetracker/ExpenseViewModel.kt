@@ -6,7 +6,15 @@ import androidx.lifecycle.ViewModel
 
 class ExpenseViewModel : ViewModel() {
 
-    val expenseSheets = mutableStateListOf<ExpenseSheet>()
+    // Use companion object to share data across all activities
+    companion object {
+        private val _sharedSheets = mutableStateListOf<ExpenseSheet>()
+
+        fun getSharedSheets() = _sharedSheets
+    }
+
+    // Reference the shared list
+    val expenseSheets = getSharedSheets()
 
     var showCreateSheetDialog = mutableStateOf(false)
         private set

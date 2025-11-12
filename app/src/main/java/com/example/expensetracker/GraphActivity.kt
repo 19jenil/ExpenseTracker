@@ -113,7 +113,7 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // Square aspect ratio as required
+            .aspectRatio(1f) // Square aspect ratio
             .padding(8.dp)
     ) {
         Canvas(
@@ -176,42 +176,91 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                 }
             }
 
-            // Draw bars for each month
-            val barWidth = graphWidth / (sheets.size * 3)
-            val groupWidth = graphWidth / sheets.size
+            // Calculate points for line graphs
+            val spacing = graphWidth / (sheets.size - 1).coerceAtLeast(1)
 
-            sheets.forEachIndexed { index, sheet ->
-                val groupStartX = leftMargin + (groupWidth * index)
+            // Income line points
+            val incomePoints = sheets.mapIndexed { index, sheet ->
+                val x = leftMargin + (spacing * index)
+                val y = canvasHeight - bottomMargin - (sheet.income / yAxisMax * graphHeight).toFloat()
+                Offset(x, y)
+            }
+
+            // Expense line points
+            val expensePoints = sheets.mapIndexed { index, sheet ->
                 val totalExpenses = sheet.expenses.sumOf { it.amount }
+                val x = leftMargin + (spacing * index)
+                val y = canvasHeight - bottomMargin - (totalExpenses / yAxisMax * graphHeight).toFloat()
+                Offset(x, y)
+            }
 
-                // Income bar (Blue)
-                val incomeHeight = (sheet.income / yAxisMax * graphHeight).toFloat()
-                val incomeBarX = groupStartX + barWidth * 0.5f
-
-                drawRect(
+            // Draw Income line (Blue)
+            if (incomePoints.size >= 2) {
+                val incomePath = Path().apply {
+                    moveTo(incomePoints[0].x, incomePoints[0].y)
+                    for (i in 1 until incomePoints.size) {
+                        lineTo(incomePoints[i].x, incomePoints[i].y)
+                    }
+                }
+                drawPath(
+                    path = incomePath,
                     color = Color(0xFF2196F3),
-                    topLeft = Offset(incomeBarX, canvasHeight - bottomMargin - incomeHeight),
-                    size = androidx.compose.ui.geometry.Size(barWidth, incomeHeight)
+                    style = Stroke(width = 6f, cap = StrokeCap.Round)
                 )
+            }
 
-                // Expense bar (Red)
-                val expenseHeight = (totalExpenses / yAxisMax * graphHeight).toFloat()
-                val expenseBarX = groupStartX + barWidth * 1.8f
-
-                drawRect(
+            // Draw Expense line (Red)
+            if (expensePoints.size >= 2) {
+                val expensePath = Path().apply {
+                    moveTo(expensePoints[0].x, expensePoints[0].y)
+                    for (i in 1 until expensePoints.size) {
+                        lineTo(expensePoints[i].x, expensePoints[i].y)
+                    }
+                }
+                drawPath(
+                    path = expensePath,
                     color = Color(0xFFF44336),
-                    topLeft = Offset(expenseBarX, canvasHeight - bottomMargin - expenseHeight),
-                    size = androidx.compose.ui.geometry.Size(barWidth, expenseHeight)
+                    style = Stroke(width = 6f, cap = StrokeCap.Round)
                 )
+            }
 
-                // X-axis label (Month abbreviation)
+            // Draw points on income line
+            incomePoints.forEach { point ->
+                drawCircle(
+                    color = Color(0xFF2196F3),
+                    radius = 8f,
+                    center = point
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = 4f,
+                    center = point
+                )
+            }
+
+            // Draw points on expense line
+            expensePoints.forEach { point ->
+                drawCircle(
+                    color = Color(0xFFF44336),
+                    radius = 8f,
+                    center = point
+                )
+                drawCircle(
+                    color = Color.White,
+                    radius = 4f,
+                    center = point
+                )
+            }
+
+            // Draw X-axis labels (Month names)
+            sheets.forEachIndexed { index, sheet ->
                 val monthAbbrev = getMonthAbbreviation(sheet.monthValue)
-                val labelX = groupStartX + groupWidth / 2
+                val x = leftMargin + (spacing * index)
 
                 drawContext.canvas.nativeCanvas.apply {
                     drawText(
                         monthAbbrev,
-                        labelX,
+                        x,
                         canvasHeight - bottomMargin + 40f,
                         android.graphics.Paint().apply {
                             color = android.graphics.Color.BLACK
@@ -222,7 +271,7 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                     // Year below month
                     drawText(
                         "'${sheet.yearValue % 100}",
-                        labelX,
+                        x,
                         canvasHeight - bottomMargin + 70f,
                         android.graphics.Paint().apply {
                             color = android.graphics.Color.GRAY
@@ -236,10 +285,10 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
             // Draw Y-axis title
             drawContext.canvas.nativeCanvas.apply {
                 save()
-                rotate(-90f, 30f, canvasHeight / 2)
+                rotate(-90f, 60f, canvasHeight / 2)
                 drawText(
-                    "Amount ($)",
-                    30f,
+                    "Amount (€)",
+                    60f,
                     canvasHeight / 2,
                     android.graphics.Paint().apply {
                         color = android.graphics.Color.BLACK
@@ -268,6 +317,7 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
         }
     }
 }
+
 
 @Composable
 fun GraphLegend() {

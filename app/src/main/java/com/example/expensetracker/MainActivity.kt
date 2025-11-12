@@ -59,19 +59,41 @@ fun ExpenseTrackerApp() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Expense Tracker") },
-                actions = {
-                    TextButton(
-                        onClick = {
-                            val intent = Intent(context, GraphActivity::class.java)
-                            context.startActivity(intent)
+                title = {
+                    Text(
+                        if (selectedSheet == null)
+                            "Expense Tracker"
+                        else
+                            selectedSheet.getDisplayName()
+                    )
+                },
+                navigationIcon = {
+                    // Show back button only when viewing a sheet
+                    if (selectedSheet != null) {
+                        IconButton(onClick = { selectedSheetId = null }) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back to list",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
-                    ) {
-                        Text(
-                            text = "Graph",
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Bold
-                        )
+                    }
+                },
+                actions = {
+                    // Show Graph button only on main screen
+                    if (selectedSheet == null) {
+                        TextButton(
+                            onClick = {
+                                val intent = Intent(context, GraphActivity::class.java)
+                                context.startActivity(intent)
+                            }
+                        ) {
+                            Text(
+                                text = "Graph",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -80,10 +102,13 @@ fun ExpenseTrackerApp() {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.openCreateSheetDialog() }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Create New Sheet")
+            // Only show FAB on main screen
+            if (selectedSheet == null) {
+                FloatingActionButton(
+                    onClick = { viewModel.openCreateSheetDialog() }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Create New Sheet")
+                }
             }
         }
     )  { paddingValues ->
@@ -157,3 +182,4 @@ fun ExpenseTrackerApp() {
         }
     }
 }
+
