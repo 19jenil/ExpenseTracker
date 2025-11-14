@@ -21,7 +21,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.text.style.TextAlign
 import com.example.expensetracker.Expense
 import com.example.expensetracker.ExpenseSheet
@@ -34,6 +36,8 @@ fun CreateSheetDialog(
     existingSheetChecker: (Int, Int) -> Boolean
 ) {
     val calendar = Calendar.getInstance()
+
+    // Default to current month and year
     var selectedMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
     var selectedYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
     var errorMessage by remember { mutableStateOf("") }
@@ -171,6 +175,7 @@ fun CreateSheetDialog(
 }
 
 
+
 @Composable
 fun ExpenseSheetList(
     sheets: List<ExpenseSheet>,
@@ -261,6 +266,8 @@ fun ExpenseSheetDetailView(
     sheet: ExpenseSheet,
     onEditIncome: () -> Unit,
     onAddExpense: () -> Unit,
+    onEditExpense: (Expense) -> Unit,
+    onDeleteExpense: (Expense) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -358,21 +365,18 @@ fun ExpenseSheetDetailView(
                 contentAlignment = Alignment.Center
             ) {
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "No expenses recorded",
                         fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Click 'Add Expense' to start tracking",
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -382,7 +386,11 @@ fun ExpenseSheetDetailView(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(sheet.expenses) { expense ->
-                    ExpenseItemCard(expense = expense)
+                    ExpenseItemCard(
+                        expense = expense,
+                        onEdit = { onEditExpense(expense) },
+                        onDelete = { onDeleteExpense(expense) }
+                    )
                 }
             }
         }
@@ -450,57 +458,6 @@ fun ExpenseSheetDetailView(
     }
 }
 
-
-@Composable
-fun ExpenseItemCard(expense: Expense) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = expense.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = expense.category,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            Text(
-                text = "-€${String.format("%.2f", expense.amount)}",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFF44336)
-            )
-        }
-    }
-}
 
 @Composable
 fun EditIncomeDialog(
@@ -754,3 +711,314 @@ fun AddExpenseDialog(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditExpenseDialog(
+    expense: Expense,
+    onDismiss: () -> Unit,
+    onConfirm: (Expense) -> Unit
+) {
+    var title by remember { mutableStateOf(expense.title) }
+    var amount by remember { mutableStateOf(expense.amount.toString()) }
+    var category by remember { mutableStateOf(expense.category) }
+    var errorMessage by remember { mutableStateOf("") }
+    var expandedCategory by remember { mutableStateOf(false) }
+
+    val categories = listOf(
+        "Food", "Transportation", "Shopping", "Entertainment",
+        "Bills", "Healthcare", "Education", "Other"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Edit Expense",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Title field
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = {
+                        title = it
+                        errorMessage = ""
+                    },
+                    label = { Text("Expense Title") },
+                    placeholder = { Text("e.g., Grocery shopping") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Amount field
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = {
+                        amount = it
+                        errorMessage = ""
+                    },
+                    label = { Text("Amount") },
+                    placeholder = { Text("0.00") },
+                    leadingIcon = { Text("$", fontSize = 18.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Category dropdown
+                ExposedDropdownMenuBox(
+                    expanded = expandedCategory,
+                    onExpandedChange = { expandedCategory = !expandedCategory }
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expandedCategory,
+                        onDismissRequest = { expandedCategory = false }
+                    ) {
+                        categories.forEach { item ->
+                            DropdownMenuItem(
+                                text = { Text(item) },
+                                onClick = {
+                                    category = item
+                                    expandedCategory = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            when {
+                                title.isBlank() -> {
+                                    errorMessage = "Please enter a title"
+                                }
+                                amount.isBlank() -> {
+                                    errorMessage = "Please enter an amount"
+                                }
+                                amount.toDoubleOrNull() == null -> {
+                                    errorMessage = "Please enter a valid amount"
+                                }
+                                amount.toDouble() <= 0 -> {
+                                    errorMessage = "Amount must be greater than 0"
+                                }
+                                else -> {
+                                    val updatedExpense = Expense(
+                                        expenseId = java.util.UUID.randomUUID().toString(),
+                                        title = title,
+                                        amount = amount.toDouble(),
+                                        category = category,
+                                        dateAdded = System.currentTimeMillis()
+                                    )
+                                    onConfirm(updatedExpense)
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Save")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteExpenseDialog(
+    expense: Expense,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = {
+            Text("Delete Expense?")
+        },
+        text = {
+            Column {
+                Text("Are you sure you want to delete this expense?")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${expense.title} - $${String.format("%.2f", expense.amount)}",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun ExpenseItemCard(
+    expense: Expense,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = expense.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = expense.category,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "-$${String.format("%.2f", expense.amount)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFF44336)
+                )
+
+                // More options button
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Edit") },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

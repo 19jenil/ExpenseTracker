@@ -2,6 +2,8 @@ package com.example.expensetracker
 
 import AddExpenseDialog
 import CreateSheetDialog
+import DeleteExpenseDialog
+import EditExpenseDialog
 import EditIncomeDialog
 import ExpenseSheetDetailView
 import ExpenseSheetList
@@ -46,12 +48,16 @@ class MainActivity : ComponentActivity() {
 fun ExpenseTrackerApp() {
     val context = LocalContext.current
     val viewModel = remember {
-        ViewModelProvider(context as ViewModelStoreOwner)[ExpenseViewModel::class.java]
+        ViewModelProvider(
+            context as ViewModelStoreOwner,
+            ExpenseViewModelFactory(context)
+        )[ExpenseViewModel::class.java]
     }
 
     // Store only the sheet ID instead of the whole object
     var selectedSheetId by remember { mutableStateOf<String?>(null) }
     var showAddExpenseDialog by remember { mutableStateOf(false) }
+    var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
 
     // Get the current sheet by ID every time we recompose
     val selectedSheet = selectedSheetId?.let { viewModel.getSheetById(it) }
@@ -122,9 +128,16 @@ fun ExpenseTrackerApp() {
                     ExpenseSheetDetailView(
                         sheet = selectedSheet,
                         onEditIncome = { viewModel.openEditIncomeDialog() },
-                        onAddExpense = { showAddExpenseDialog = true }
+                        onAddExpense = { showAddExpenseDialog = true },
+                        onEditExpense = { expense ->
+                            viewModel.openEditExpenseDialog(selectedSheet.sheetId, expense)
+                        },
+                        onDeleteExpense = { expense ->
+                            expenseToDelete = expense
+                        }
                     )
                 }
+
                 viewModel.expenseSheets.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -177,6 +190,29 @@ fun ExpenseTrackerApp() {
                 onConfirm = { expense ->
                     viewModel.addExpense(selectedSheet.sheetId, expense)
                     showAddExpenseDialog = false
+                }
+            )
+        }
+        // Edit Expense Dialog
+        if (viewModel.showEditExpenseDialog.value && viewModel.editingExpense.value != null) {
+            val (sheetId, expense) = viewModel.editingExpense.value!!
+            EditExpenseDialog(
+                expense = expense,
+                onDismiss = { viewModel.closeEditExpenseDialog() },
+                onConfirm = { updatedExpense ->
+                    viewModel.updateExpense(sheetId, expense.expenseId, updatedExpense)
+                }
+            )
+        }
+
+        // Delete Expense Confirmation Dialog
+        if (expenseToDelete != null && selectedSheet != null) {
+            DeleteExpenseDialog(
+                expense = expenseToDelete!!,
+                onDismiss = { expenseToDelete = null },
+                onConfirm = {
+                    viewModel.deleteExpense(selectedSheet.sheetId, expenseToDelete!!.expenseId)
+                    expenseToDelete = null
                 }
             )
         }
