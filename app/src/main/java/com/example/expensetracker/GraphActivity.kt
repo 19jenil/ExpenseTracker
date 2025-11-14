@@ -4,9 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +20,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,8 +50,21 @@ class GraphActivity : ComponentActivity() {
 fun GraphScreen(onBackPressed: () -> Unit) {
     val context = LocalContext.current
     val viewModel = remember {
-        ViewModelProvider(context as ViewModelStoreOwner)[ExpenseViewModel::class.java]
+        ViewModelProvider(
+            context as ViewModelStoreOwner,
+            ExpenseViewModelFactory(context)
+        )[ExpenseViewModel::class.java]
     }
+
+    // Track which 4-month window we're viewing
+    var currentOffset by remember { mutableStateOf(0) }
+
+    // Get all sheets sorted chronologically
+    val allSheets = viewModel.expenseSheets
+        .sortedBy { it.yearValue * 12 + it.monthValue }
+
+    // Calculate how many 4-month windows we can show
+    val maxOffset = (allSheets.size - 4).coerceAtLeast(0)
 
     Scaffold(
         topBar = {
@@ -75,25 +92,107 @@ fun GraphScreen(onBackPressed: () -> Unit) {
                 text = "Income/Expenses",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            if (viewModel.expenseSheets.isEmpty()) {
+            if (allSheets.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No data to display. Create expense sheets first.")
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No data to display. Create expense sheets first.")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackPressed) {
+                            Text("Go Back")
+                        }
+                    }
                 }
             } else {
-                // Get the most recent 4 sheets
-                val recentSheets = viewModel.expenseSheets
-                    .sortedBy { it.yearValue * 12 + it.monthValue }
-                    .takeLast(4)
+                // Show swipe instruction
+                Text(
+                    text = "← Swipe to navigate →",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
-                CustomIncomeExpenseGraph(sheets = recentSheets)
+                // Get the current 4 sheets to display
+                val startIndex = currentOffset.coerceIn(0, maxOffset)
+                val endIndex = (startIndex + 4).coerceAtMost(allSheets.size)
+                val currentSheets = allSheets.subList(startIndex, endIndex)
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // Display date range
+                if (currentSheets.isNotEmpty()) {
+                    Text(
+                        text = "${currentSheets.first().getDisplayName()} - ${currentSheets.last().getDisplayName()}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                CustomIncomeExpenseGraph(
+                    sheets = currentSheets,
+                    onSwipeLeft = {
+                        if (currentOffset < maxOffset) {
+                            currentOffset++
+                        }
+                    },
+                    onSwipeRight = {
+                        if (currentOffset > 0) {
+                            currentOffset--
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Navigation indicators
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { if (currentOffset > 0) currentOffset-- },
+                        enabled = currentOffset > 0
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Previous",
+                            tint = if (currentOffset > 0)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+
+                    Text(
+                        text = "${currentOffset + 1} / ${maxOffset + 1}",
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+
+                    IconButton(
+                        onClick = { if (currentOffset < maxOffset) currentOffset++ },
+                        enabled = currentOffset < maxOffset
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowForward,
+                            contentDescription = "Next",
+                            tint = if (currentOffset < maxOffset)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Legend
                 GraphLegend()
@@ -102,19 +201,45 @@ fun GraphScreen(onBackPressed: () -> Unit) {
     }
 }
 
+
 @Composable
-fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
+fun CustomIncomeExpenseGraph(
+    sheets: List<ExpenseSheet>,
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {}
+) {
+    if (sheets.isEmpty()) return
+
     // Calculate max value for y-axis scaling
     val maxIncome = sheets.maxOfOrNull { it.income } ?: 0.0
     val maxExpense = sheets.maxOfOrNull { it.expenses.sumOf { exp -> exp.amount } } ?: 0.0
     val maxValue = max(maxIncome, maxExpense)
-    val yAxisMax = ((maxValue / 1000).toInt() + 1) * 1000.0 // Round up to nearest thousand
+    val yAxisMax = ((maxValue / 1000).toInt() + 1) * 1000.0
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f) // Square aspect ratio
+            .aspectRatio(1f)
             .padding(8.dp)
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        // Gesture completed
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+
+                        // Detect swipe direction
+                        if (dragAmount > 50) {
+                            // Swiped right - go to previous
+                            onSwipeRight()
+                        } else if (dragAmount < -50) {
+                            // Swiped left - go to next
+                            onSwipeLeft()
+                        }
+                    }
+                )
+            }
     ) {
         Canvas(
             modifier = Modifier.fillMaxSize()
@@ -161,23 +286,17 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                     strokeWidth = 1f
                 )
 
-                // Y-axis label with proper formatting
+                // Y-axis label
                 drawContext.canvas.nativeCanvas.apply {
-                    val labelText = when {
-                        yValue >= 1000 -> {
-                            val thousands = yValue / 1000
-                            if (thousands % 1 == 0.0) {
-                                "€${thousands.toInt()}k"
-                            } else {
-                                "€${String.format("%.1f", thousands)}k"
-                            }
+                    val labelText = if (yValue >= 1000) {
+                        val thousands = yValue / 1000.0
+                        if (thousands == thousands.toInt().toDouble()) {
+                            "$${thousands.toInt()}k"
+                        } else {
+                            "$${String.format("%.1f", thousands)}k"
                         }
-                        yValue > 0 -> {
-                            "€${yValue.toInt()}"
-                        }
-                        else -> {
-                            "€0"
-                        }
+                    } else {
+                        "$${yValue.toInt()}"
                     }
 
                     drawText(
@@ -194,7 +313,11 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
             }
 
             // Calculate points for line graphs
-            val spacing = graphWidth / (sheets.size - 1).coerceAtLeast(1)
+            val spacing = if (sheets.size > 1) {
+                graphWidth / (sheets.size - 1)
+            } else {
+                0f
+            }
 
             // Income line points
             val incomePoints = sheets.mapIndexed { index, sheet ->
@@ -269,7 +392,7 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                 )
             }
 
-            // Draw X-axis labels (Month names)
+            // Draw X-axis labels
             sheets.forEachIndexed { index, sheet ->
                 val monthAbbrev = getMonthAbbreviation(sheet.monthValue)
                 val x = leftMargin + (spacing * index)
@@ -285,7 +408,6 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
                             textAlign = android.graphics.Paint.Align.CENTER
                         }
                     )
-                    // Year below month
                     drawText(
                         "'${sheet.yearValue % 100}",
                         x,
@@ -302,10 +424,10 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
             // Draw Y-axis title
             drawContext.canvas.nativeCanvas.apply {
                 save()
-                rotate(-90f, 60f, canvasHeight / 2)
+                rotate(-90f, 20f, canvasHeight / 2)
                 drawText(
-                    "Amount (€)",
-                    60f,
+                    "Amount ($)",
+                    20f,
                     canvasHeight / 2,
                     android.graphics.Paint().apply {
                         color = android.graphics.Color.BLACK
@@ -334,6 +456,7 @@ fun CustomIncomeExpenseGraph(sheets: List<ExpenseSheet>) {
         }
     }
 }
+
 
 
 @Composable
