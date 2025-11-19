@@ -1,5 +1,6 @@
 package com.example.expensetracker
 
+import LightPink
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -76,7 +77,7 @@ fun GraphScreen(onBackPressed: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = LightPink
                 )
             )
         }
@@ -301,7 +302,7 @@ fun CustomIncomeExpenseGraph(
 
                     drawText(
                         labelText,
-                        leftMargin - 60f,
+                        leftMargin - 15f,
                         yPos + 10f,
                         android.graphics.Paint().apply {
                             color = android.graphics.Color.BLACK
@@ -424,10 +425,10 @@ fun CustomIncomeExpenseGraph(
             // Draw Y-axis title
             drawContext.canvas.nativeCanvas.apply {
                 save()
-                rotate(-90f, 20f, canvasHeight / 2)
+                rotate(-90f, -20f, canvasHeight / 2)
                 drawText(
-                    "Amount ($)",
-                    20f,
+                    "Amount (€)",
+                    -40f,
                     canvasHeight / 2,
                     android.graphics.Paint().apply {
                         color = android.graphics.Color.BLACK

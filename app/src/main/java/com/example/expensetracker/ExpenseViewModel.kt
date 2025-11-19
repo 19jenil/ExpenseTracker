@@ -153,6 +153,74 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
         super.onCleared()
         dbHelper.close()
     }
+
+    // Add these new state variables
+    var showEditSheetDialog = mutableStateOf(false)
+        private set
+
+    var editingSheet = mutableStateOf<ExpenseSheet?>(null)
+        private set
+
+    // Sheet editing functions
+    fun openEditSheetDialog(sheet: ExpenseSheet) {
+        editingSheet.value = sheet
+        showEditSheetDialog.value = true
+    }
+
+    fun closeEditSheetDialog() {
+        showEditSheetDialog.value = false
+        editingSheet.value = null
+    }
+
+    fun updateSheet(oldSheetId: String, newMonth: Int, newYear: Int) {
+        // Check if new month/year combination already exists (excluding current sheet)
+        val exists = expenseSheets.any {
+            it.sheetId != oldSheetId &&
+                    it.monthValue == newMonth &&
+                    it.yearValue == newYear
+        }
+
+        if (exists) {
+            return // Don't update if duplicate would be created
+        }
+
+        val index = expenseSheets.indexOfFirst { it.sheetId == oldSheetId }
+        if (index != -1) {
+            val oldSheet = expenseSheets[index]
+
+            // Delete old sheet from database
+            dbHelper.deleteSheet(oldSheetId)
+
+            // Create new sheet with updated month/year
+            val updatedSheet = oldSheet.copy(
+                sheetId = java.util.UUID.randomUUID().toString(),
+                monthValue = newMonth,
+                yearValue = newYear
+            )
+
+            // Insert updated sheet to database
+            dbHelper.insertSheet(updatedSheet)
+
+            // Re-insert all expenses
+            updatedSheet.expenses.forEach { expense ->
+                dbHelper.insertExpense(updatedSheet.sheetId, expense)
+            }
+
+            // Update in memory
+            expenseSheets[index] = updatedSheet
+        }
+
+        closeEditSheetDialog()
+    }
+
+    fun deleteSheet(sheetId: String) {
+        // Delete from database
+        dbHelper.deleteSheet(sheetId)
+
+        // Remove from memory
+        expenseSheets.removeIf { it.sheetId == sheetId }
+    }
+
 }
 
 
@@ -165,3 +233,4 @@ class ExpenseViewModelFactory(private val context: Context) : ViewModelProvider.
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+

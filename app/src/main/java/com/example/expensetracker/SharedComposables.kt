@@ -3,7 +3,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,10 +23,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.ui.text.style.TextAlign
 import com.example.expensetracker.Expense
 import com.example.expensetracker.ExpenseSheet
+import androidx.compose.material.icons.filled.DateRange
+import java.text.SimpleDateFormat
 import java.util.*
+
+val LightPink      = Color(0xFFFFE4EC)
+val PinkMain       = Color(0xFFFF6F91) // Used for buttons, highlights, selection, primary
+val PinkCard       = Color(0xFFFFF0F6) // Slightly lighter for surface/card backgrounds
+val PinkDark       = Color(0xFFE75480) // For indicators, secondary if needed
+val PinkText       = Color(0xFF880E4F) // For main/pink contrasting text
+val PinkSurfaceVar = Color(0xFFFFF5FA) // For surfaceVariant/scaffold background
+val PinkError      = Color(0xFFD32F2F) // For errors (keep red for contrast/accessibility)
 
 @Composable
 fun CreateSheetDialog(
@@ -36,6 +44,9 @@ fun CreateSheetDialog(
     existingSheetChecker: (Int, Int) -> Boolean
 ) {
     val calendar = Calendar.getInstance()
+
+    // Paste to Color.kt or top of file
+
 
     // Default to current month and year
     var selectedMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
@@ -53,7 +64,7 @@ fun CreateSheetDialog(
                 .fillMaxWidth()
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = LightPink)
         ) {
             Column(
                 modifier = Modifier
@@ -116,7 +127,7 @@ fun CreateSheetDialog(
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
                                     if (isSelected)
-                                        MaterialTheme.colorScheme.primary
+                                        PinkMain
                                     else
                                         MaterialTheme.colorScheme.surfaceVariant
                                 )
@@ -164,7 +175,7 @@ fun CreateSheetDialog(
                             } else {
                                 onConfirm(selectedMonth, selectedYear)
                             }
-                        }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
                     ) {
                         Text("Create")
                     }
@@ -180,6 +191,8 @@ fun CreateSheetDialog(
 fun ExpenseSheetList(
     sheets: List<ExpenseSheet>,
     onSheetClick: (ExpenseSheet) -> Unit,
+    onEditSheet: (ExpenseSheet) -> Unit,
+    onDeleteSheet: (ExpenseSheet) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -190,24 +203,31 @@ fun ExpenseSheetList(
         items(sheets) { sheet ->
             ExpenseSheetCard(
                 sheet = sheet,
-                onClick = { onSheetClick(sheet) }
+                onClick = { onSheetClick(sheet) },
+                onEdit = { onEditSheet(sheet) },
+                onDelete = { onDeleteSheet(sheet) }
             )
         }
     }
 }
 
+
 @Composable
 fun ExpenseSheetCard(
     sheet: ExpenseSheet,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = LightPink
         )
     ) {
         Row(
@@ -237,29 +257,87 @@ fun ExpenseSheetCard(
                 )
             }
 
-            Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.padding(start = 8.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
             ) {
-                Text(
-                    text = "Balance",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "€${String.format("%.2f", sheet.calculateBalance())}",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (sheet.calculateBalance() >= 0)
-                        Color(0xFF4CAF50)
-                    else
-                        Color(0xFFF44336)
-                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Balance",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "€${String.format("%.2f", sheet.calculateBalance())}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (sheet.calculateBalance() >= 0)
+                            Color(0xFF4CAF50)
+                        else
+                            Color(0xFFF44336)
+                    )
+                }
+
+                // More options menu
+                Box {
+                    IconButton(
+                        onClick = { showMenu = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options"
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("View Details") },
+                            onClick = {
+                                showMenu = false
+                                onClick()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.ArrowForward, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Edit Month/Year") },
+                            onClick = {
+                                showMenu = false
+                                onEdit()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Edit, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete") },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun ExpenseSheetDetailView(
@@ -279,7 +357,7 @@ fun ExpenseSheetDetailView(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                containerColor = LightPink
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -342,7 +420,8 @@ fun ExpenseSheetDetailView(
 
             Button(
                 onClick = onAddExpense,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -475,7 +554,7 @@ fun EditIncomeDialog(
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = LightPink
             )
         ) {
             Column(
@@ -542,7 +621,7 @@ fun EditIncomeDialog(
                                     onConfirm(income)
                                 }
                             }
-                        }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
                     ) {
                         Text("Save")
                     }
@@ -564,6 +643,11 @@ fun AddExpenseDialog(
     var errorMessage by remember { mutableStateOf("") }
     var expandedCategory by remember { mutableStateOf(false) }
 
+    // Default to current date
+    val currentDate = remember { Calendar.getInstance() }
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val formattedDate = remember { dateFormat.format(currentDate.time) }
+
     val categories = listOf(
         "Food", "Transportation", "Shopping", "Entertainment",
         "Bills", "Healthcare", "Education", "Other"
@@ -576,7 +660,7 @@ fun AddExpenseDialog(
                 .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = LightPink
             )
         ) {
             Column(
@@ -588,8 +672,29 @@ fun AddExpenseDialog(
                     text = "Add New Expense",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+
+                // Display current date
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Date",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = formattedDate,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 // Title field
                 OutlinedTextField(
@@ -697,12 +802,13 @@ fun AddExpenseDialog(
                                     val expense = Expense(
                                         title = title,
                                         amount = amount.toDouble(),
-                                        category = category
+                                        category = category,
+                                        dateAdded = System.currentTimeMillis()
                                     )
                                     onConfirm(expense)
                                 }
                             }
-                        }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
                     ) {
                         Text("Add")
                     }
@@ -711,6 +817,7 @@ fun AddExpenseDialog(
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -724,6 +831,10 @@ fun EditExpenseDialog(
     var category by remember { mutableStateOf(expense.category) }
     var errorMessage by remember { mutableStateOf("") }
     var expandedCategory by remember { mutableStateOf(false) }
+
+    // Format the existing date
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val formattedDate = remember { dateFormat.format(Date(expense.dateAdded)) }
 
     val categories = listOf(
         "Food", "Transportation", "Shopping", "Entertainment",
@@ -749,8 +860,29 @@ fun EditExpenseDialog(
                     text = "Edit Expense",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+
+                // Display expense date
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "Date",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Added on $formattedDate",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 // Title field
                 OutlinedTextField(
@@ -776,7 +908,7 @@ fun EditExpenseDialog(
                     },
                     label = { Text("Amount") },
                     placeholder = { Text("0.00") },
-                    leadingIcon = { Text("$", fontSize = 18.sp) },
+                    leadingIcon = { Text("€", fontSize = 18.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -860,12 +992,12 @@ fun EditExpenseDialog(
                                         title = title,
                                         amount = amount.toDouble(),
                                         category = category,
-                                        dateAdded = System.currentTimeMillis()
+                                        dateAdded = System.currentTimeMillis() // Update to current time when edited
                                     )
                                     onConfirm(updatedExpense)
                                 }
                             }
-                        }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
                     ) {
                         Text("Save")
                     }
@@ -874,6 +1006,7 @@ fun EditExpenseDialog(
         }
     }
 }
+
 
 @Composable
 fun DeleteExpenseDialog(
@@ -898,7 +1031,7 @@ fun DeleteExpenseDialog(
                 Text("Are you sure you want to delete this expense?")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "${expense.title} - $${String.format("%.2f", expense.amount)}",
+                    text = "${expense.title} - €${String.format("%.2f", expense.amount)}",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -930,6 +1063,10 @@ fun ExpenseItemCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
+    // Format date
+    val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val formattedDate = dateFormat.format(Date(expense.dateAdded))
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -952,18 +1089,37 @@ fun ExpenseItemCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
                         text = expense.category,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
+                                color = LightPink,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     )
+
+                    // Display date
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = formattedDate,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -972,7 +1128,7 @@ fun ExpenseItemCard(
                 horizontalArrangement = Arrangement.End
             ) {
                 Text(
-                    text = "-$${String.format("%.2f", expense.amount)}",
+                    text = "-€${String.format("%.2f", expense.amount)}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFF44336)
@@ -1021,4 +1177,202 @@ fun ExpenseItemCard(
         }
     }
 }
+
+@Composable
+fun EditSheetDialog(
+    sheet: ExpenseSheet,
+    onDismiss: () -> Unit,
+    onConfirm: (month: Int, year: Int) -> Unit,
+    existingSheetChecker: (Int, Int) -> Boolean
+) {
+    var selectedMonth by remember { mutableStateOf(sheet.monthValue) }
+    var selectedYear by remember { mutableStateOf(sheet.yearValue) }
+    var errorMessage by remember { mutableStateOf("") }
+
+    val monthNames = listOf(
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Edit Expense Sheet",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // Year selector
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { selectedYear-- }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Previous Year")
+                    }
+
+                    Text(
+                        text = selectedYear.toString(),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    IconButton(onClick = { selectedYear++ }) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Next Year")
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                Text(
+                    text = "Select Month",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Month grid selector
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(200.dp)
+                ) {
+                    items(monthNames.size) { index ->
+                        val monthNumber = index + 1
+                        val isSelected = selectedMonth == monthNumber
+
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(1.5f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                .clickable {
+                                    selectedMonth = monthNumber
+                                    errorMessage = ""
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = monthNames[index],
+                                color = if (isSelected) Color.White else Color.Black,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (existingSheetChecker(selectedMonth, selectedYear)) {
+                                errorMessage = "Sheet for this month already exists"
+                            } else {
+                                onConfirm(selectedMonth, selectedYear)
+                            }
+                        }, colors = ButtonDefaults.buttonColors(containerColor = PinkMain)
+
+                    ) {
+                        Text("Save")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeleteSheetDialog(
+    sheet: ExpenseSheet,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(32.dp)
+            )
+        },
+        title = {
+            Text("Delete Expense Sheet?")
+        },
+        text = {
+            Column {
+                Text("Are you sure you want to delete this expense sheet?")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = sheet.getDisplayName(),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "This will delete ${sheet.expenses.size} expense(s) and cannot be undone.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 

@@ -3,8 +3,10 @@ package com.example.expensetracker
 import AddExpenseDialog
 import CreateSheetDialog
 import DeleteExpenseDialog
+import DeleteSheetDialog
 import EditExpenseDialog
 import EditIncomeDialog
+import EditSheetDialog
 import ExpenseSheetDetailView
 import ExpenseSheetList
 import android.content.Intent
@@ -25,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.compose.ui.text.font.FontWeight
-
+import androidx.compose.ui.graphics.Color
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,23 +56,26 @@ fun ExpenseTrackerApp() {
         )[ExpenseViewModel::class.java]
     }
 
-    // Store only the sheet ID instead of the whole object
     var selectedSheetId by remember { mutableStateOf<String?>(null) }
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
+    var sheetToDelete by remember { mutableStateOf<ExpenseSheet?>(null) }
 
-    // Get the current sheet by ID every time we recompose
     val selectedSheet = selectedSheetId?.let { viewModel.getSheetById(it) }
-
+    val LightPink = Color(0xFFFFE4EC)
+    val PinkText = Color(0xFF880E4F)
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        if (selectedSheet == null)
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        text = if (selectedSheet == null)
                             "Expense Tracker"
                         else
-                            selectedSheet.getDisplayName()
+                            selectedSheet.getDisplayName(),
+
                     )
                 },
                 navigationIcon = {
@@ -80,11 +85,13 @@ fun ExpenseTrackerApp() {
                             Icon(
                                 Icons.Default.ArrowBack,
                                 contentDescription = "Back to list",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = PinkText,
+
                             )
                         }
                     }
                 },
+
                 actions = {
                     // Show Graph button only on main screen
                     if (selectedSheet == null) {
@@ -103,7 +110,9 @@ fun ExpenseTrackerApp() {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = LightPink,        // top bar background color
+                    //titleContentColor = PinkText,      // title text color
+                    navigationIconContentColor = PinkText
                 )
             )
         },
@@ -111,7 +120,8 @@ fun ExpenseTrackerApp() {
             // Only show FAB on main screen
             if (selectedSheet == null) {
                 FloatingActionButton(
-                    onClick = { viewModel.openCreateSheetDialog() }
+                    onClick = { viewModel.openCreateSheetDialog() },
+                    containerColor = LightPink,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Create New Sheet")
                 }
@@ -137,7 +147,6 @@ fun ExpenseTrackerApp() {
                         }
                     )
                 }
-
                 viewModel.expenseSheets.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -153,12 +162,13 @@ fun ExpenseTrackerApp() {
                 else -> {
                     ExpenseSheetList(
                         sheets = viewModel.expenseSheets,
-                        onSheetClick = { sheet -> selectedSheetId = sheet.sheetId }
+                        onSheetClick = { sheet -> selectedSheetId = sheet.sheetId },
+                        onEditSheet = { sheet -> viewModel.openEditSheetDialog(sheet) },
+                        onDeleteSheet = { sheet -> sheetToDelete = sheet }
                     )
                 }
             }
         }
-
         // Create Sheet Dialog
         if (viewModel.showCreateSheetDialog.value) {
             CreateSheetDialog(
@@ -213,6 +223,33 @@ fun ExpenseTrackerApp() {
                 onConfirm = {
                     viewModel.deleteExpense(selectedSheet.sheetId, expenseToDelete!!.expenseId)
                     expenseToDelete = null
+                }
+            )
+        }
+        // Edit Sheet Dialog
+        if (viewModel.showEditSheetDialog.value && viewModel.editingSheet.value != null) {
+            val sheet = viewModel.editingSheet.value!!
+            EditSheetDialog(
+                sheet = sheet,
+                onDismiss = { viewModel.closeEditSheetDialog() },
+                onConfirm = { month, year ->
+                    viewModel.updateSheet(sheet.sheetId, month, year)
+                },
+                existingSheetChecker = { month, year ->
+                    viewModel.checkIfSheetExists(month, year) &&
+                            !(sheet.monthValue == month && sheet.yearValue == year)
+                }
+            )
+        }
+        // Delete Sheet Confirmation
+        if (sheetToDelete != null) {
+            DeleteSheetDialog(
+                sheet = sheetToDelete!!,
+                onDismiss = { sheetToDelete = null },
+                onConfirm = {
+                    viewModel.deleteSheet(sheetToDelete!!.sheetId)
+                    sheetToDelete = null
+                    selectedSheetId = null // Return to list if viewing deleted sheet
                 }
             )
         }
