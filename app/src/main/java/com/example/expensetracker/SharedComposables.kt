@@ -45,10 +45,10 @@ fun CreateSheetDialog(
 ) {
     val calendar = Calendar.getInstance()
 
-    // Paste to Color.kt or top of file
 
 
-    // Default to current month and year
+
+    // Default selection to current month and year
     var selectedMonth by remember { mutableStateOf(calendar.get(Calendar.MONTH) + 1) }
     var selectedYear by remember { mutableStateOf(calendar.get(Calendar.YEAR)) }
     var errorMessage by remember { mutableStateOf("") }
@@ -675,7 +675,7 @@ fun AddExpenseDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Display current date
+                //  displaying current date
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1214,7 +1214,7 @@ fun EditSheetDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                // Year selector
+                // Year selection
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1246,7 +1246,7 @@ fun EditSheetDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Month grid selector
+                // Month selection
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

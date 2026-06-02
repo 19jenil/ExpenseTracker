@@ -16,17 +16,17 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         private const val DATABASE_NAME = "expense_tracker.db"
         private const val DATABASE_VERSION = 1
 
-        // Table names
+
         private const val TABLE_SHEETS = "expense_sheets"
         private const val TABLE_EXPENSES = "expenses"
 
-        // Expense Sheets table columns
+
         private const val COLUMN_SHEET_ID = "sheet_id"
         private const val COLUMN_MONTH = "month"
         private const val COLUMN_YEAR = "year"
         private const val COLUMN_INCOME = "income"
 
-        // Expenses table columns
+
         private const val COLUMN_EXPENSE_ID = "expense_id"
         private const val COLUMN_EXPENSE_SHEET_ID = "expense_sheet_id"
         private const val COLUMN_TITLE = "title"
@@ -36,7 +36,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
     }
 
     override fun onCreate(db: SQLiteDatabase) {
-        // Create Expense Sheets table
+
         val createSheetsTable = """
             CREATE TABLE $TABLE_SHEETS (
                 $COLUMN_SHEET_ID TEXT PRIMARY KEY,
@@ -46,7 +46,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
             )
         """.trimIndent()
 
-        // Create Expenses table
+
         val createExpensesTable = """
             CREATE TABLE $TABLE_EXPENSES (
                 $COLUMN_EXPENSE_ID TEXT PRIMARY KEY,
@@ -71,7 +71,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         onCreate(db)
     }
 
-    // Insert a new expense sheet
+
     fun insertSheet(sheet: ExpenseSheet): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -83,7 +83,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return db.insert(TABLE_SHEETS, null, values)
     }
 
-    // Insert a new expense
+
     fun insertExpense(sheetId: String, expense: Expense): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -97,7 +97,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return db.insert(TABLE_EXPENSES, null, values)
     }
 
-    // Update sheet income
+
     fun updateSheetIncome(sheetId: String, newIncome: Double): Int {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -111,7 +111,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         )
     }
 
-    // Get all expense sheets
+
     fun getAllSheets(): List<ExpenseSheet> {
         val sheets = mutableListOf<ExpenseSheet>()
         val db = readableDatabase
@@ -150,7 +150,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return sheets
     }
 
-    // Get expenses for a specific sheet
+
     fun getExpensesForSheet(sheetId: String): List<Expense> {
         val expenses = mutableListOf<Expense>()
         val db = readableDatabase
@@ -187,7 +187,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return expenses
     }
 
-    // Delete a sheet and all its expenses
+
     fun deleteSheet(sheetId: String): Int {
         val db = writableDatabase
         // Delete expenses first
@@ -196,13 +196,13 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return db.delete(TABLE_SHEETS, "$COLUMN_SHEET_ID = ?", arrayOf(sheetId))
     }
 
-    // Delete a specific expense
+
     fun deleteExpense(expenseId: String): Int {
         val db = writableDatabase
         return db.delete(TABLE_EXPENSES, "$COLUMN_EXPENSE_ID = ?", arrayOf(expenseId))
     }
 
-    // Check if sheet exists
+
     fun sheetExists(month: Int, year: Int): Boolean {
         val db = readableDatabase
         val cursor = db.query(
@@ -219,7 +219,7 @@ class ExpenseDatabaseHelper(context: Context) : SQLiteOpenHelper(
         return exists
     }
 
-    // Clear all data
+
     fun clearAllData() {
         val db = writableDatabase
         db.execSQL("DELETE FROM $TABLE_EXPENSES")

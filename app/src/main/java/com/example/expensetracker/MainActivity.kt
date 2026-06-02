@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -79,7 +78,7 @@ fun ExpenseTrackerApp() {
                     )
                 },
                 navigationIcon = {
-                    // Show back button only when viewing a sheet
+
                     if (selectedSheet != null) {
                         IconButton(onClick = { selectedSheetId = null }) {
                             Icon(
@@ -93,7 +92,7 @@ fun ExpenseTrackerApp() {
                 },
 
                 actions = {
-                    // Show Graph button only on main screen
+
                     if (selectedSheet == null) {
                         TextButton(
                             onClick = {
@@ -110,14 +109,13 @@ fun ExpenseTrackerApp() {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = LightPink,        // top bar background color
-                    //titleContentColor = PinkText,      // title text color
+                    containerColor = LightPink,
                     navigationIconContentColor = PinkText
                 )
             )
         },
         floatingActionButton = {
-            // Only show FAB on main screen
+
             if (selectedSheet == null) {
                 FloatingActionButton(
                     onClick = { viewModel.openCreateSheetDialog() },
@@ -169,7 +167,7 @@ fun ExpenseTrackerApp() {
                 }
             }
         }
-        // Create Sheet Dialog
+
         if (viewModel.showCreateSheetDialog.value) {
             CreateSheetDialog(
                 onDismiss = { viewModel.closeCreateSheetDialog() },
@@ -182,7 +180,7 @@ fun ExpenseTrackerApp() {
             )
         }
 
-        // Edit Income Dialog
+
         if (viewModel.showEditIncomeDialog.value && selectedSheet != null) {
             EditIncomeDialog(
                 currentIncome = selectedSheet.income,
@@ -193,7 +191,7 @@ fun ExpenseTrackerApp() {
             )
         }
 
-        // Add Expense Dialog
+
         if (showAddExpenseDialog && selectedSheet != null) {
             AddExpenseDialog(
                 onDismiss = { showAddExpenseDialog = false },
@@ -203,7 +201,7 @@ fun ExpenseTrackerApp() {
                 }
             )
         }
-        // Edit Expense Dialog
+
         if (viewModel.showEditExpenseDialog.value && viewModel.editingExpense.value != null) {
             val (sheetId, expense) = viewModel.editingExpense.value!!
             EditExpenseDialog(
@@ -215,7 +213,7 @@ fun ExpenseTrackerApp() {
             )
         }
 
-        // Delete Expense Confirmation Dialog
+
         if (expenseToDelete != null && selectedSheet != null) {
             DeleteExpenseDialog(
                 expense = expenseToDelete!!,
@@ -226,7 +224,7 @@ fun ExpenseTrackerApp() {
                 }
             )
         }
-        // Edit Sheet Dialog
+
         if (viewModel.showEditSheetDialog.value && viewModel.editingSheet.value != null) {
             val sheet = viewModel.editingSheet.value!!
             EditSheetDialog(
@@ -241,7 +239,7 @@ fun ExpenseTrackerApp() {
                 }
             )
         }
-        // Delete Sheet Confirmation
+
         if (sheetToDelete != null) {
             DeleteSheetDialog(
                 sheet = sheetToDelete!!,

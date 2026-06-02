@@ -56,14 +56,14 @@ fun GraphScreen(onBackPressed: () -> Unit) {
         )[ExpenseViewModel::class.java]
     }
 
-    // Track which 4-month window we're viewing
+
     var currentOffset by remember { mutableStateOf(0) }
 
-    // Get all sheets sorted chronologically
+
     val allSheets = viewModel.expenseSheets
         .sortedBy { it.yearValue * 12 + it.monthValue }
 
-    // Calculate how many 4-month windows we can show
+
     val maxOffset = (allSheets.size - 4).coerceAtLeast(0)
 
     Scaffold(
@@ -111,7 +111,7 @@ fun GraphScreen(onBackPressed: () -> Unit) {
                     }
                 }
             } else {
-                // Show swipe instruction
+
                 Text(
                     text = "← Swipe to navigate →",
                     fontSize = 12.sp,
@@ -119,12 +119,12 @@ fun GraphScreen(onBackPressed: () -> Unit) {
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Get the current 4 sheets to display
+
                 val startIndex = currentOffset.coerceIn(0, maxOffset)
                 val endIndex = (startIndex + 4).coerceAtMost(allSheets.size)
                 val currentSheets = allSheets.subList(startIndex, endIndex)
 
-                // Display date range
+
                 if (currentSheets.isNotEmpty()) {
                     Text(
                         text = "${currentSheets.first().getDisplayName()} - ${currentSheets.last().getDisplayName()}",
@@ -151,7 +151,7 @@ fun GraphScreen(onBackPressed: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Navigation indicators
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -210,7 +210,7 @@ fun CustomIncomeExpenseGraph(
 ) {
     if (sheets.isEmpty()) return
 
-    // Calculate max value for y-axis scaling
+
     val maxIncome = sheets.maxOfOrNull { it.income } ?: 0.0
     val maxExpense = sheets.maxOfOrNull { it.expenses.sumOf { exp -> exp.amount } } ?: 0.0
     val maxValue = max(maxIncome, maxExpense)
@@ -224,17 +224,17 @@ fun CustomIncomeExpenseGraph(
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
-                        // Gesture completed
+
                     },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
 
-                        // Detect swipe direction
+
                         if (dragAmount > 50) {
-                            // Swiped right - go to previous
+
                             onSwipeRight()
                         } else if (dragAmount < -50) {
-                            // Swiped left - go to next
+
                             onSwipeLeft()
                         }
                     }
@@ -256,7 +256,7 @@ fun CustomIncomeExpenseGraph(
             val graphWidth = canvasWidth - leftMargin - rightMargin
             val graphHeight = canvasHeight - topMargin - bottomMargin
 
-            // Draw Y-axis
+            //  Y-axis
             drawLine(
                 color = Color.Black,
                 start = Offset(leftMargin, topMargin),
@@ -264,7 +264,7 @@ fun CustomIncomeExpenseGraph(
                 strokeWidth = 3f
             )
 
-            // Draw X-axis
+            //  X-axis
             drawLine(
                 color = Color.Black,
                 start = Offset(leftMargin, canvasHeight - bottomMargin),
@@ -272,7 +272,7 @@ fun CustomIncomeExpenseGraph(
                 strokeWidth = 3f
             )
 
-            // Draw Y-axis labels and grid lines
+            //  Y-axis labels and grid lines
             val ySteps = 5
             for (i in 0..ySteps) {
                 val yValue = (yAxisMax / ySteps) * i
@@ -312,21 +312,21 @@ fun CustomIncomeExpenseGraph(
                 }
             }
 
-            // Calculate points for line graphs
+
             val spacing = if (sheets.size > 1) {
                 graphWidth / (sheets.size - 1)
             } else {
                 0f
             }
 
-            // Income line points
+
             val incomePoints = sheets.mapIndexed { index, sheet ->
                 val x = leftMargin + (spacing * index)
                 val y = canvasHeight - bottomMargin - (sheet.income / yAxisMax * graphHeight).toFloat()
                 Offset(x, y)
             }
 
-            // Expense line points
+
             val expensePoints = sheets.mapIndexed { index, sheet ->
                 val totalExpenses = sheet.expenses.sumOf { it.amount }
                 val x = leftMargin + (spacing * index)
@@ -334,7 +334,7 @@ fun CustomIncomeExpenseGraph(
                 Offset(x, y)
             }
 
-            // Draw Income line (Blue)
+
             if (incomePoints.size >= 2) {
                 val incomePath = Path().apply {
                     moveTo(incomePoints[0].x, incomePoints[0].y)
@@ -349,7 +349,7 @@ fun CustomIncomeExpenseGraph(
                 )
             }
 
-            // Draw Expense line (Red)
+
             if (expensePoints.size >= 2) {
                 val expensePath = Path().apply {
                     moveTo(expensePoints[0].x, expensePoints[0].y)
@@ -364,7 +364,7 @@ fun CustomIncomeExpenseGraph(
                 )
             }
 
-            // Draw points on income line
+
             incomePoints.forEach { point ->
                 drawCircle(
                     color = Color(0xFF2196F3),
@@ -378,7 +378,7 @@ fun CustomIncomeExpenseGraph(
                 )
             }
 
-            // Draw points on expense line
+
             expensePoints.forEach { point ->
                 drawCircle(
                     color = Color(0xFFF44336),
@@ -392,7 +392,7 @@ fun CustomIncomeExpenseGraph(
                 )
             }
 
-            // Draw X-axis labels
+            //  X-axis labels
             sheets.forEachIndexed { index, sheet ->
                 val monthAbbrev = getMonthAbbreviation(sheet.monthValue)
                 val x = leftMargin + (spacing * index)
@@ -421,7 +421,7 @@ fun CustomIncomeExpenseGraph(
                 }
             }
 
-            // Draw Y-axis title
+            //  Y-axis title
             drawContext.canvas.nativeCanvas.apply {
                 save()
                 rotate(-90f, -20f, canvasHeight / 2)
@@ -439,7 +439,7 @@ fun CustomIncomeExpenseGraph(
                 restore()
             }
 
-            // Draw X-axis title
+            //  X-axis title
             drawContext.canvas.nativeCanvas.apply {
                 drawText(
                     "Months",

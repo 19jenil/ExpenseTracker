@@ -21,7 +21,7 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
         private set
 
     init {
-        // Load data from database on initialization
+
         loadSheetsFromDatabase()
     }
 
@@ -42,13 +42,13 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
     }
 
     fun updateExpense(sheetId: String, oldExpenseId: String, updatedExpense: Expense) {
-        // Delete old expense from database
+
         dbHelper.deleteExpense(oldExpenseId)
 
-        // Insert updated expense to database
+
         dbHelper.insertExpense(sheetId, updatedExpense)
 
-        // Update in memory
+
         val index = expenseSheets.indexOfFirst { it.sheetId == sheetId }
         if (index != -1) {
             val oldSheet = expenseSheets[index]
@@ -97,10 +97,10 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
             yearValue = yearValue
         )
 
-        // Save to database
+
         dbHelper.insertSheet(newSheet)
 
-        // Update UI list
+
         expenseSheets.add(newSheet)
         closeCreateSheetDialog()
     }
@@ -132,10 +132,10 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
     }
 
     fun addExpense(sheetId: String, expense: Expense) {
-        // Save expense to database
+
         dbHelper.insertExpense(sheetId, expense)
 
-        // Update in memory
+
         val index = expenseSheets.indexOfFirst { it.sheetId == sheetId }
         if (index != -1) {
             val oldSheet = expenseSheets[index]
@@ -154,14 +154,14 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
         dbHelper.close()
     }
 
-    // Add these new state variables
+
     var showEditSheetDialog = mutableStateOf(false)
         private set
 
     var editingSheet = mutableStateOf<ExpenseSheet?>(null)
         private set
 
-    // Sheet editing functions
+
     fun openEditSheetDialog(sheet: ExpenseSheet) {
         editingSheet.value = sheet
         showEditSheetDialog.value = true
@@ -181,32 +181,32 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
         }
 
         if (exists) {
-            return // Don't update if duplicate would be created
+            return
         }
 
         val index = expenseSheets.indexOfFirst { it.sheetId == oldSheetId }
         if (index != -1) {
             val oldSheet = expenseSheets[index]
 
-            // Delete old sheet from database
+
             dbHelper.deleteSheet(oldSheetId)
 
-            // Create new sheet with updated month/year
+
             val updatedSheet = oldSheet.copy(
                 sheetId = java.util.UUID.randomUUID().toString(),
                 monthValue = newMonth,
                 yearValue = newYear
             )
 
-            // Insert updated sheet to database
+
             dbHelper.insertSheet(updatedSheet)
 
-            // Re-insert all expenses
+
             updatedSheet.expenses.forEach { expense ->
                 dbHelper.insertExpense(updatedSheet.sheetId, expense)
             }
 
-            // Update in memory
+
             expenseSheets[index] = updatedSheet
         }
 
@@ -214,10 +214,10 @@ class ExpenseViewModel(private val context: Context) : ViewModel() {
     }
 
     fun deleteSheet(sheetId: String) {
-        // Delete from database
+
         dbHelper.deleteSheet(sheetId)
 
-        // Remove from memory
+
         expenseSheets.removeIf { it.sheetId == sheetId }
     }
 
